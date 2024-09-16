@@ -23,8 +23,6 @@ import {
 
 export type RedisSaverParams = {
   connection: Redis;
-  checkpointCollectionsName?: string;
-  writesCollectionsName?: string;
 };
 
 export class RedisSaver extends BaseCheckpointSaver {

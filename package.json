@@ -2,7 +2,7 @@
   "name": "checkpoint-redis",
   "version": "0.1.0",
   "description": "langchain redis checkpoint saver",
-  "main": "index.js",
+  "main": "dist/index.js",
   "type": "module",
   "engines": {
     "node": ">=18"
@@ -10,11 +10,13 @@
   "scripts": {
     "test": "glob -c \"tsx --test \" \"src/**/*.test.ts\"",
     "clean": "rm -rf dist",
-    "build": "npm run clean && tsc -b ./tsconfig.json ./tsconfig.cjs.json ./tsconfig.types.json",
-    "prepack": "npm run clean && npm run build",
+    "build": "npm run clean && tsc",
+    "prepack": "npm run build",
+    "prepare": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run lint:eslint && npm run lint:dpdm",
     "lint:eslint": "NODE_OPTIONS=--max-old-space-size=4096 eslint --cache --ext .ts,.js src/",
     "lint:dpdm": "dpdm --exit-code circular:1 --no-warning --no-tree src/*.ts src/**/*.ts",
-    "lint": "npm run lint:eslint && npm run lint:dpdm",
     "format": "prettier --config .prettierrc --write \"src\"",
     "format:check": "prettier --config .prettierrc --check \"src\""
   },
@@ -36,12 +38,12 @@
   },
   "homepage": "https://github.com/levivoelz/checkpoint-redis#readme",
   "peerDependencies": {
-    "@langchain/core": ">=0.2.31 <0.3.0",
-    "@langchain/langgraph-checkpoint": "~0.0.4",
+    "@langchain/core": ">=0.2.31 <0.4.0",
+    "@langchain/langgraph-checkpoint": "^0.0.6",
     "ioredis": ">=5.0.0"
   },
   "devDependencies": {
-    "@langchain/langgraph-checkpoint": "~0.0.4",
+    "@langchain/langgraph-checkpoint": "^0.0.6",
     "@tsconfig/recommended": "^1.0.3",
     "@types/ioredis-mock": "^8.2.5",
     "@types/node": "^22.5.0",
@@ -58,9 +60,8 @@
     "glob": "^11.0.0",
     "ioredis-mock": "^8.9.0",
     "prettier": "^2.8.3",
-    "ts-node": "^10.9.2",
-    "tsc-alias": "^1.8.10",
-    "tsx": "^4.17.0"
+    "tsx": "^4.17.0",
+    "typescript": "^5.6.2"
   },
   "publishConfig": {
     "access": "public",
@@ -69,15 +70,13 @@
   "exports": {
     "./*": {
       "types": "./dist/types/*.d.ts",
-      "require": "./dist/cjs/*.js",
-      "import": "./dist/esm/*.js",
-      "default": "./dist/esm/*.js"
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist/esm/",
-    "dist/cjs/",
-    "dist/types/"
+    "dist",
+    "src"
   ]
 }

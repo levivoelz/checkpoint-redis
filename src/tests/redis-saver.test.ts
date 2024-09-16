@@ -9,7 +9,7 @@ import Redis from "ioredis-mock";
 
 import { RedisSaver } from "../redis-saver.js";
 
-const redisClient = new Redis.default();
+const redisClient = new Redis();
 const saver = new RedisSaver({ connection: redisClient });
 
 const checkpoint1: Checkpoint = {

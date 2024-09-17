@@ -2,7 +2,8 @@
   "name": "checkpoint-redis",
   "version": "0.1.0",
   "description": "langchain redis checkpoint saver",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "module",
   "engines": {
     "node": ">=18"
@@ -68,10 +69,12 @@
     "registry": "https://registry.npmjs.org/"
   },
   "exports": {
-    "./*": {
-      "types": "./dist/types/*.d.ts",
-      "import": "./dist/*.js",
-      "default": "./dist/*.js"
+    ".": {
+      "types": {
+        "import": "./index.d.ts",
+        "default": "./index.d.ts"
+      },
+      "import": "./index.js"
     },
     "./package.json": "./package.json"
   },
@@ -80,3 +83,4 @@
     "src"
   ]
 }
+

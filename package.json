@@ -32,7 +32,7 @@
     "checkpoint",
     "redis-saver"
   ],
-  "author": "Levi Voelz <levi@hatchmatter.com>",
+  "author": "Levi Voelz",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/levivoelz/checkpoint-redis/issues"

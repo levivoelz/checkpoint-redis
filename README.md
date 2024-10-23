@@ -2,10 +2,15 @@
 
 A TypeScript implementation of a Redis-based checkpoint saver for [langgraph](https://github.com/langchain-ai/langgraphjs). Based on [How to create a custom checkpoint saver](https://langchain-ai.github.io/langgraph/how-tos/persistence_redis/) (python).
 
+## Install
+```bash
+npm install checkpoint-redis
+```
+
 ## Usage
 
 ```ts
-import { RedisSaver } from "@levivoelz/checkpoint-redis";
+import { RedisSaver } from "checkpoint-redis";
 import { Redis } from "ioredis";
 
 const redis = new Redis(process.env.REDIS_URL);

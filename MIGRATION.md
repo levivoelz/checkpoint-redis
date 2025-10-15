@@ -1,10 +1,10 @@
-# Migration Guide: v0.1.x to v0.2.x
+# Migration Guide: v0.1.x to v0.3.x
 
-This guide helps you upgrade from `checkpoint-redis` v0.1.x to v0.2.x.
+This guide helps you upgrade from `checkpoint-redis` v0.1.x to v0.3.x.
 
 ## Overview
 
-Version 0.2.0 introduces several improvements including TTL support, better error handling, and API enhancements. Most changes are backward compatible, but there are some important updates to be aware of.
+Version 0.3.0 introduces several improvements including TTL support, better error handling, and API enhancements. Most changes are backward compatible, but there are some important updates to be aware of.
 
 ## Breaking Changes
 
@@ -58,7 +58,7 @@ You can now configure automatic cleanup of old checkpoints:
 // v0.1.x - No TTL support
 const saver = new RedisSaver({ connection: redis });
 
-// v0.2.x - Optional TTL support
+// v0.3.x - Optional TTL support
 const saver = new RedisSaver({ 
   connection: redis, 
   ttl: 3600 // 1 hour in seconds
@@ -78,7 +78,7 @@ Error messages are now more descriptive and helpful:
 // v0.1.x - Basic error messages
 // Error: "Mismatched checkpoint and metadata types."
 
-// v0.2.x - Detailed error messages with context
+// v0.3.x - Detailed error messages with context
 // Error: "Serialization type mismatch: checkpoint type 'json' does not match metadata type 'msgpack'. This usually indicates a serialization configuration issue."
 ```
 
@@ -92,7 +92,7 @@ Error messages are now more descriptive and helpful:
 Added comprehensive input validation:
 
 ```typescript
-// v0.2.x now validates all parameters
+// v0.3.x now validates all parameters
 const saver = new RedisSaver({ connection: redis, ttl: 3600 });
 
 // These will now throw helpful errors:
@@ -113,7 +113,7 @@ The `deleteThread` method now properly handles all namespaces:
 // v0.1.x - Only deleted empty namespace threads
 await saver.deleteThread("thread-123");
 
-// v0.2.x - Deletes threads across ALL namespaces
+// v0.3.x - Deletes threads across ALL namespaces
 await saver.deleteThread("thread-123"); // Now works correctly
 ```
 
@@ -211,7 +211,7 @@ await saver.deleteThread("test");
 
 1. **Install the new version:**
    ```bash
-   npm install checkpoint-redis@^0.2.0
+   npm install checkpoint-redis@^0.3.0
    ```
 
 2. **Run your existing tests:**
@@ -263,7 +263,7 @@ await saver.deleteThread("test");
 
 ## Summary
 
-Version 0.2.0 is a significant improvement that adds TTL support, better error handling, and fixes several issues. The upgrade should be straightforward for most users, with only internal changes that don't affect the public API.
+Version 0.3.0 is a significant improvement that adds TTL support, better error handling, and fixes several issues. The upgrade should be straightforward for most users, with only internal changes that don't affect the public API.
 
 **Key takeaways:**
 - ✅ **Public API unchanged** - your existing code will work without changes

@@ -285,4 +285,77 @@ await describe("RedisSaver", async () => {
       /getTuple\(\) requires config.configurable.thread_id to be defined/
     );
   });
+
+  await it("should delete thread across all namespaces", async () => {
+    // Clear Redis before test
+    await redisClient.flushall();
+
+    const checkpoint1: Checkpoint = {
+      v: 1,
+      id: uuid6(-1),
+      ts: "2024-04-19T17:19:07.952Z",
+      channel_values: { testKey: "testValue1" },
+      channel_versions: { testKey: 1 },
+      versions_seen: {},
+      pending_sends: [],
+    };
+
+    const checkpoint2: Checkpoint = {
+      v: 1,
+      id: uuid6(1),
+      ts: "2024-04-20T17:19:07.952Z",
+      channel_values: { testKey: "testValue2" },
+      channel_versions: { testKey: 2 },
+      versions_seen: {},
+      pending_sends: [],
+    };
+
+    // Create checkpoints in different namespaces
+    await saver.put(
+      { configurable: { thread_id: "delete-test", checkpoint_ns: "" } },
+      checkpoint1,
+      { source: "update", step: -1, writes: null }
+    );
+
+    await saver.put(
+      { configurable: { thread_id: "delete-test", checkpoint_ns: "namespace1" } },
+      checkpoint2,
+      { source: "update", step: -1, writes: null }
+    );
+
+    // Verify checkpoints exist
+    const checkpoint1Exists = await saver.getTuple({
+      configurable: { thread_id: "delete-test", checkpoint_ns: "" }
+    });
+    const checkpoint2Exists = await saver.getTuple({
+      configurable: { thread_id: "delete-test", checkpoint_ns: "namespace1" }
+    });
+
+    assert.ok(checkpoint1Exists, "Checkpoint 1 should exist before deletion");
+    assert.ok(checkpoint2Exists, "Checkpoint 2 should exist before deletion");
+
+    // Delete the thread
+    await saver.deleteThread("delete-test");
+
+    // Verify both checkpoints are deleted
+    const checkpoint1AfterDelete = await saver.getTuple({
+      configurable: { thread_id: "delete-test", checkpoint_ns: "" }
+    });
+    const checkpoint2AfterDelete = await saver.getTuple({
+      configurable: { thread_id: "delete-test", checkpoint_ns: "namespace1" }
+    });
+
+    assert.strictEqual(checkpoint1AfterDelete, undefined, "Checkpoint 1 should be deleted");
+    assert.strictEqual(checkpoint2AfterDelete, undefined, "Checkpoint 2 should be deleted");
+  });
+
+  await it("should handle deleteThread with non-existent thread gracefully", async () => {
+    // Clear Redis before test
+    await redisClient.flushall();
+
+    // Delete non-existent thread should not throw
+    await assert.doesNotReject(
+      () => saver.deleteThread("non-existent-thread")
+    );
+  });
 });

@@ -293,18 +293,27 @@ export class RedisSaver extends BaseCheckpointSaver {
   }
 
   async deleteThread(threadId: string): Promise<void> {
-    // Get all checkpoint keys for this thread
-    const checkpointPattern = makeRedisCheckpointKey(threadId, "", "*");
-    const checkpointKeys = await this.connection.keys(checkpointPattern);
+    try {
+      // Get all checkpoint keys for this thread across all namespaces
+      // Pattern: checkpoint:threadId:* (matches any namespace)
+      const checkpointPattern = makeRedisCheckpointKey(threadId, "*", "*");
+      const checkpointKeys = await this.connection.keys(checkpointPattern);
 
-    // Get all write keys for this thread
-    const writesPattern = makeRedisCheckpointWritesKey(threadId, "", "*", "*", null);
-    const writeKeys = await this.connection.keys(writesPattern);
+      // Get all write keys for this thread across all namespaces
+      // Pattern: writes:threadId:* (matches any namespace)
+      const writesPattern = makeRedisCheckpointWritesKey(threadId, "*", "*", "*", null);
+      const writeKeys = await this.connection.keys(writesPattern);
 
-    // Delete all keys
-    const allKeys = [...checkpointKeys, ...writeKeys];
-    if (allKeys.length > 0) {
-      await this.connection.del(...allKeys);
+      // Delete all keys
+      const allKeys = [...checkpointKeys, ...writeKeys];
+      if (allKeys.length > 0) {
+        await this.connection.del(...allKeys);
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to delete thread: ${error instanceof Error ? error.message : String(error)}. ` +
+        `Thread: ${threadId}`
+      );
     }
   }
 

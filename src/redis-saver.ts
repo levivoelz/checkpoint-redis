@@ -32,6 +32,19 @@ export class RedisSaver extends BaseCheckpointSaver {
 
   constructor({ connection, ttl }: RedisSaverParams, serde?: SerializerProtocol) {
     super(serde);
+    
+    // Validate required parameters
+    if (!connection) {
+      throw new Error("RedisSaver requires a valid Redis connection. Got: undefined");
+    }
+    
+    // Validate TTL parameter
+    if (ttl !== undefined) {
+      if (typeof ttl !== 'number' || !Number.isInteger(ttl) || ttl <= 0) {
+        throw new Error(`Invalid TTL value: ${ttl}. TTL must be a positive integer (seconds).`);
+      }
+    }
+    
     this.connection = connection;
     this.ttl = ttl;
   }
@@ -41,14 +54,34 @@ export class RedisSaver extends BaseCheckpointSaver {
     checkpoint: Checkpoint,
     metadata: CheckpointMetadata
   ): Promise<RunnableConfig> {
+    // Validate required parameters
+    if (!config) {
+      throw new Error("put() requires a valid RunnableConfig. Got: undefined");
+    }
+    if (!checkpoint) {
+      throw new Error("put() requires a valid Checkpoint. Got: undefined");
+    }
+    if (!metadata) {
+      throw new Error("put() requires valid CheckpointMetadata. Got: undefined");
+    }
+    if (!checkpoint.id) {
+      throw new Error("put() requires checkpoint to have a valid id. Got: undefined");
+    }
+
     const checkpoint_id = checkpoint.id;
     const {
       thread_id,
       checkpoint_ns = "",
       checkpoint_id: parent_checkpoint_id,
     } = config.configurable ?? {};
+
+    // Validate required config fields
+    if (!thread_id) {
+      throw new Error("put() requires config.configurable.thread_id to be defined. Got: undefined");
+    }
+
     const key = makeRedisCheckpointKey(
-      thread_id ?? "",
+      thread_id,
       checkpoint_ns,
       checkpoint_id
     );
@@ -57,7 +90,10 @@ export class RedisSaver extends BaseCheckpointSaver {
     const [metadataType, serializedMetadata] = await this.serde.dumpsTyped(metadata);
 
     if (checkpointType !== metadataType) {
-      throw new Error("Mismatched checkpoint and metadata types.");
+      throw new Error(
+        `Serialization type mismatch: checkpoint type "${checkpointType}" does not match metadata type "${metadataType}". ` +
+        `This usually indicates a serialization configuration issue.`
+      );
     }
 
     const data = {
@@ -68,11 +104,18 @@ export class RedisSaver extends BaseCheckpointSaver {
       parent_checkpoint_id: parent_checkpoint_id ?? "",
     };
 
-    await this.connection.hset(key, data);
+    try {
+      await this.connection.hset(key, data);
 
-    // Set TTL if configured
-    if (this.ttl) {
-      await this.connection.expire(key, this.ttl);
+      // Set TTL if configured
+      if (this.ttl) {
+        await this.connection.expire(key, this.ttl);
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to save checkpoint to Redis: ${error instanceof Error ? error.message : String(error)}. ` +
+        `Key: ${key}, Thread: ${thread_id}, Checkpoint: ${checkpoint_id}`
+      );
     }
 
     return {
@@ -89,6 +132,17 @@ export class RedisSaver extends BaseCheckpointSaver {
     writes: PendingWrite[],
     task_id: string
   ): Promise<void> {
+    // Validate required parameters
+    if (!config) {
+      throw new Error("putWrites() requires a valid RunnableConfig. Got: undefined");
+    }
+    if (!Array.isArray(writes)) {
+      throw new Error(`putWrites() requires writes to be an array. Got: ${typeof writes}`);
+    }
+    if (!task_id || typeof task_id !== 'string') {
+      throw new Error(`putWrites() requires a valid task_id string. Got: ${task_id}`);
+    }
+
     const { thread_id, checkpoint_ns, checkpoint_id } =
       config.configurable ?? {};
 
@@ -98,36 +152,60 @@ export class RedisSaver extends BaseCheckpointSaver {
       checkpoint_id === undefined
     ) {
       throw new Error(
-        `The provided config must contain a configurable field with "thread_id", "checkpoint_ns" and "checkpoint_id" fields.`
+        `putWrites() requires config.configurable to contain "thread_id", "checkpoint_ns" and "checkpoint_id" fields. ` +
+        `Got: thread_id=${thread_id}, checkpoint_ns=${checkpoint_ns}, checkpoint_id=${checkpoint_id}`
       );
     }
 
-    const dumpedWrites = await dumpWrites(this.serde, writes);
+    try {
+      const dumpedWrites = await dumpWrites(this.serde, writes);
 
-    for (const [idx, write] of dumpedWrites.entries()) {
-      const key = makeRedisCheckpointWritesKey(
-        thread_id,
-        checkpoint_ns,
-        checkpoint_id,
-        task_id,
-        idx
-      );
+      for (const [idx, write] of dumpedWrites.entries()) {
+        const key = makeRedisCheckpointWritesKey(
+          thread_id,
+          checkpoint_ns,
+          checkpoint_id,
+          task_id,
+          idx
+        );
 
-      await this.connection.hset(key, write);
+        try {
+          await this.connection.hset(key, write);
 
-      // Set TTL if configured
-      if (this.ttl) {
-        await this.connection.expire(key, this.ttl);
+          // Set TTL if configured
+          if (this.ttl) {
+            await this.connection.expire(key, this.ttl);
+          }
+        } catch (error) {
+          throw new Error(
+            `Failed to save write to Redis: ${error instanceof Error ? error.message : String(error)}. ` +
+            `Key: ${key}, Thread: ${thread_id}, Checkpoint: ${checkpoint_id}, Task: ${task_id}, Index: ${idx}`
+          );
+        }
       }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Failed to save write to Redis:')) {
+        throw error; // Re-throw Redis operation errors
+      }
+      throw new Error(
+        `Failed to serialize writes: ${error instanceof Error ? error.message : String(error)}. ` +
+        `Thread: ${thread_id}, Checkpoint: ${checkpoint_id}, Task: ${task_id}`
+      );
     }
   }
 
   async getTuple(config: RunnableConfig): Promise<CheckpointTuple | undefined> {
+    // Validate required parameters
+    if (!config) {
+      throw new Error("getTuple() requires a valid RunnableConfig. Got: undefined");
+    }
+
     const { thread_id, checkpoint_ns = "" } = config.configurable ?? {};
     let { checkpoint_id } = config.configurable ?? {};
 
-    if (thread_id === undefined) {
-      throw new Error("thread_id is required in config.configurable");
+    // Validate required config fields
+    if (!thread_id) {
+      throw new Error("getTuple() requires config.configurable.thread_id to be defined. Got: undefined");
     }
 
     const checkpointKey = await this._getCheckpointKey(
@@ -138,7 +216,15 @@ export class RedisSaver extends BaseCheckpointSaver {
 
     if (!checkpointKey) return;
 
-    const checkpointData = await this.connection.hgetall(checkpointKey);
+    let checkpointData: Record<string, string>;
+    try {
+      checkpointData = await this.connection.hgetall(checkpointKey);
+    } catch (error) {
+      throw new Error(
+        `Failed to retrieve checkpoint data from Redis: ${error instanceof Error ? error.message : String(error)}. ` +
+        `Key: ${checkpointKey}, Thread: ${thread_id}`
+      );
+    }
 
     checkpoint_id =
       checkpoint_id ?? parseRedisCheckpointKey(checkpointKey).checkpoint_id;
@@ -151,7 +237,16 @@ export class RedisSaver extends BaseCheckpointSaver {
       null
     );
 
-    const matchingKeys = await this.connection.keys(writesKey);
+    let matchingKeys: string[];
+    try {
+      matchingKeys = await this.connection.keys(writesKey);
+    } catch (error) {
+      throw new Error(
+        `Failed to retrieve write keys from Redis: ${error instanceof Error ? error.message : String(error)}. ` +
+        `Pattern: ${writesKey}, Thread: ${thread_id}, Checkpoint: ${checkpoint_id}`
+      );
+    }
+
     const parsedKeys = matchingKeys
       .map((key) => parseRedisCheckpointWritesKey(key))
       .sort((a, b) => Number(a.idx) - Number(b.idx));

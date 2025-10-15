@@ -183,4 +183,106 @@ await describe("RedisSaver", async () => {
     // TTL should be set (exact value may vary due to Redis mock behavior)
     assert.ok(ttl > 0, "TTL should be set on checkpoint key");
   });
+
+  await it("should validate constructor parameters", async () => {
+    // Test missing connection
+    assert.throws(
+      () => new RedisSaver({ connection: undefined as any }),
+      /RedisSaver requires a valid Redis connection/
+    );
+
+    // Test invalid TTL values
+    assert.throws(
+      () => new RedisSaver({ connection: redisClient, ttl: -1 }),
+      /Invalid TTL value: -1/
+    );
+
+    assert.throws(
+      () => new RedisSaver({ connection: redisClient, ttl: 1.5 }),
+      /Invalid TTL value: 1.5/
+    );
+
+    assert.throws(
+      () => new RedisSaver({ connection: redisClient, ttl: "invalid" as any }),
+      /Invalid TTL value: invalid/
+    );
+
+    // Test valid TTL
+    assert.doesNotThrow(
+      () => new RedisSaver({ connection: redisClient, ttl: 3600 })
+    );
+  });
+
+  await it("should validate put() method parameters", async () => {
+    // Test missing config
+    await assert.rejects(
+      () => saver.put(undefined as any, checkpoint1, { source: "update", step: -1, writes: null }),
+      /put\(\) requires a valid RunnableConfig/
+    );
+
+    // Test missing checkpoint
+    await assert.rejects(
+      () => saver.put({ configurable: { thread_id: "test" } }, undefined as any, { source: "update", step: -1, writes: null }),
+      /put\(\) requires a valid Checkpoint/
+    );
+
+    // Test missing metadata
+    await assert.rejects(
+      () => saver.put({ configurable: { thread_id: "test" } }, checkpoint1, undefined as any),
+      /put\(\) requires valid CheckpointMetadata/
+    );
+
+    // Test missing thread_id
+    await assert.rejects(
+      () => saver.put({ configurable: {} }, checkpoint1, { source: "update", step: -1, writes: null }),
+      /put\(\) requires config.configurable.thread_id to be defined/
+    );
+
+    // Test checkpoint without id
+    const invalidCheckpoint = { ...checkpoint1, id: undefined };
+    await assert.rejects(
+      () => saver.put({ configurable: { thread_id: "test" } }, invalidCheckpoint as any, { source: "update", step: -1, writes: null }),
+      /put\(\) requires checkpoint to have a valid id/
+    );
+  });
+
+  await it("should validate putWrites() method parameters", async () => {
+    // Test missing config
+    await assert.rejects(
+      () => saver.putWrites(undefined as any, [], "task1"),
+      /putWrites\(\) requires a valid RunnableConfig/
+    );
+
+    // Test invalid writes
+    await assert.rejects(
+      () => saver.putWrites({ configurable: { thread_id: "test", checkpoint_ns: "", checkpoint_id: "test" } }, "not-array" as any, "task1"),
+      /putWrites\(\) requires writes to be an array/
+    );
+
+    // Test invalid task_id
+    await assert.rejects(
+      () => saver.putWrites({ configurable: { thread_id: "test", checkpoint_ns: "", checkpoint_id: "test" } }, [], undefined as any),
+      /putWrites\(\) requires a valid task_id string/
+    );
+
+    // Test missing required config fields
+    await assert.rejects(
+      () => saver.putWrites({ configurable: {} }, [], "task1"),
+      /putWrites\(\) requires config.configurable to contain "thread_id", "checkpoint_ns" and "checkpoint_id" fields/
+    );
+  });
+
+  await it("should validate getTuple() method parameters", async () => {
+    // Test missing config
+    await assert.rejects(
+      () => saver.getTuple(undefined as any),
+      /getTuple\(\) requires a valid RunnableConfig/
+    );
+
+    // Test missing thread_id
+    await assert.rejects(
+      () => saver.getTuple({ configurable: {} }),
+      /getTuple\(\) requires config.configurable.thread_id to be defined/
+    );
+  });
 });

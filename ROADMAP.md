@@ -5,10 +5,10 @@ Planned improvements for `checkpoint-redis`.
 ## Critical Issues
 
 ### Error Handling & Validation
-- [ ] **Inconsistent validation** - `put()` method doesn't validate `thread_id`
-- [ ] **Silent failures** - `putWrites()` uses fire-and-forget operations with no error handling
-- [ ] **Missing connection validation** - no check if Redis is actually connected
-- [ ] **Better error messages** with context about failed operations
+- [x] **Inconsistent validation** - `put()` method doesn't validate `thread_id` ✅ Fixed in commit 6b688e0
+- [x] **Silent failures** - `putWrites()` uses fire-and-forget operations with no error handling ✅ Fixed in commit 6b688e0
+- [x] **Missing connection validation** - no check if Redis is actually connected ✅ Fixed in commit 6b688e0
+- [x] **Better error messages** with context about failed operations ✅ Fixed in commit 6b688e0
 
 ### Performance Issues
 - [ ] **Inefficient key parsing** - `filterKeys()` parses every key twice
@@ -17,7 +17,7 @@ Planned improvements for `checkpoint-redis`.
 - [ ] **Optimize `_getCheckpointKey()`** - parses all keys to find latest
 
 ### Code Quality Issues
-- [ ] **Fix typo** - `decodeCommaSeperatedString` should be "Separated"
+- [x] **Fix typo** - `decodeCommaSeperatedString` should be "Separated" ✅ Fixed in commit 6b688e0
 - [ ] **Fix `deleteThread()`** - hardcodes empty `checkpoint_ns` instead of using parameter
 - [ ] **Consistent naming** - mix of `thread_id` vs `threadId` throughout codebase
 - [ ] **Add null checks** in several places
@@ -30,7 +30,7 @@ Planned improvements for `checkpoint-redis`.
 ## Nice to Have
 
 ### Testing
-- [ ] **Error scenario tests** - Redis failures, malformed data
+- [x] **Error scenario tests** - Redis failures, malformed data ✅ Added in commit 6b688e0
 - [ ] **Integration tests** - real Redis instead of mocks
 - [ ] **Concurrent access tests** - race conditions
 

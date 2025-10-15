@@ -102,7 +102,7 @@ export async function loadWrites(
         data.channel,
         await serde.loadsTyped(
           data.type,
-          decodeCommaSeperatedString(data.value)
+          decodeCommaSeparatedString(data.value)
         ),
       ] as CheckpointPendingWrite
   );
@@ -128,12 +128,12 @@ export async function parseRedisCheckpointData(
   };
   const checkpoint = await serde.loadsTyped(
     data.type,
-    decodeCommaSeperatedString(data.checkpoint)
+    decodeCommaSeparatedString(data.checkpoint)
   );
 
   const metadata = await serde.loadsTyped(
     data.metadata_type,
-    decodeCommaSeperatedString(data.metadata)
+    decodeCommaSeparatedString(data.metadata)
   );
   const parentCheckpointId = data.parent_checkpoint_id;
   const parentConfig = parentCheckpointId
@@ -166,7 +166,7 @@ export function parseRedisCheckpointKey(
   };
 }
 
-function decodeCommaSeperatedString(str: string): string {
+function decodeCommaSeparatedString(str: string): string {
   const numbers = str.split(",").map((num) => parseInt(num, 10));
   const uint8Array = new Uint8Array(numbers);
   return new TextDecoder().decode(uint8Array);

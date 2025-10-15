@@ -19,7 +19,7 @@ Planned improvements for `checkpoint-redis`.
 ### Code Quality Issues
 - [x] **Fix typo** - `decodeCommaSeperatedString` should be "Separated" ✅ Fixed in commit 6b688e0
 - [ ] **Fix `deleteThread()`** - hardcodes empty `checkpoint_ns` instead of using parameter
-- [ ] **Consistent naming** - mix of `thread_id` vs `threadId` throughout codebase
+- [x] **Consistent naming** - mix of `thread_id` vs `threadId` throughout codebase ✅ Fixed in commit ae86304
 - [ ] **Add null checks** in several places
 
 ### API Improvements

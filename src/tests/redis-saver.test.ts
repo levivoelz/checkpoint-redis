@@ -259,10 +259,10 @@ await describe("RedisSaver", async () => {
       /putWrites\(\) requires writes to be an array/
     );
 
-    // Test invalid task_id
+    // Test invalid taskId
     await assert.rejects(
       () => saver.putWrites({ configurable: { thread_id: "test", checkpoint_ns: "", checkpoint_id: "test" } }, [], undefined as any),
-      /putWrites\(\) requires a valid task_id string/
+      /putWrites\(\) requires a valid taskId string/
     );
 
     // Test missing required config fields

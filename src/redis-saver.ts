@@ -68,11 +68,11 @@ export class RedisSaver extends BaseCheckpointSaver {
       throw new Error("put() requires checkpoint to have a valid id. Got: undefined");
     }
 
-    const checkpoint_id = checkpoint.id;
+    const checkpointId = checkpoint.id;
     const {
       thread_id,
       checkpoint_ns = "",
-      checkpoint_id: parent_checkpoint_id,
+      checkpoint_id: parentCheckpointId,
     } = config.configurable ?? {};
 
     // Validate required config fields
@@ -83,7 +83,7 @@ export class RedisSaver extends BaseCheckpointSaver {
     const key = makeRedisCheckpointKey(
       thread_id,
       checkpoint_ns,
-      checkpoint_id
+      checkpointId
     );
     const [checkpointType, serializedCheckpoint] =
       await this.serde.dumpsTyped(checkpoint);
@@ -101,7 +101,7 @@ export class RedisSaver extends BaseCheckpointSaver {
       type: checkpointType,
       metadata_type: metadataType,
       metadata: serializedMetadata,
-      parent_checkpoint_id: parent_checkpoint_id ?? "",
+      parent_checkpoint_id: parentCheckpointId ?? "",
     };
 
     try {
@@ -114,7 +114,7 @@ export class RedisSaver extends BaseCheckpointSaver {
     } catch (error) {
       throw new Error(
         `Failed to save checkpoint to Redis: ${error instanceof Error ? error.message : String(error)}. ` +
-        `Key: ${key}, Thread: ${thread_id}, Checkpoint: ${checkpoint_id}`
+        `Key: ${key}, Thread: ${thread_id}, Checkpoint: ${checkpointId}`
       );
     }
 
@@ -122,7 +122,7 @@ export class RedisSaver extends BaseCheckpointSaver {
       configurable: {
         thread_id,
         checkpoint_ns,
-        checkpoint_id,
+        checkpoint_id: checkpointId,
       },
     };
   }
@@ -130,7 +130,7 @@ export class RedisSaver extends BaseCheckpointSaver {
   async putWrites(
     config: RunnableConfig,
     writes: PendingWrite[],
-    task_id: string
+    taskId: string
   ): Promise<void> {
     // Validate required parameters
     if (!config) {
@@ -139,8 +139,8 @@ export class RedisSaver extends BaseCheckpointSaver {
     if (!Array.isArray(writes)) {
       throw new Error(`putWrites() requires writes to be an array. Got: ${typeof writes}`);
     }
-    if (!task_id || typeof task_id !== 'string') {
-      throw new Error(`putWrites() requires a valid task_id string. Got: ${task_id}`);
+    if (!taskId || typeof taskId !== 'string') {
+      throw new Error(`putWrites() requires a valid taskId string. Got: ${taskId}`);
     }
 
     const { thread_id, checkpoint_ns, checkpoint_id } =
@@ -165,7 +165,7 @@ export class RedisSaver extends BaseCheckpointSaver {
           thread_id,
           checkpoint_ns,
           checkpoint_id,
-          task_id,
+          taskId,
           idx
         );
 
@@ -179,7 +179,7 @@ export class RedisSaver extends BaseCheckpointSaver {
         } catch (error) {
           throw new Error(
             `Failed to save write to Redis: ${error instanceof Error ? error.message : String(error)}. ` +
-            `Key: ${key}, Thread: ${thread_id}, Checkpoint: ${checkpoint_id}, Task: ${task_id}, Index: ${idx}`
+            `Key: ${key}, Thread: ${thread_id}, Checkpoint: ${checkpoint_id}, Task: ${taskId}, Index: ${idx}`
           );
         }
       }
@@ -189,7 +189,7 @@ export class RedisSaver extends BaseCheckpointSaver {
       }
       throw new Error(
         `Failed to serialize writes: ${error instanceof Error ? error.message : String(error)}. ` +
-        `Thread: ${thread_id}, Checkpoint: ${checkpoint_id}, Task: ${task_id}`
+        `Thread: ${thread_id}, Checkpoint: ${checkpoint_id}, Task: ${taskId}`
       );
     }
   }
@@ -309,23 +309,23 @@ export class RedisSaver extends BaseCheckpointSaver {
   }
 
   private async _getCheckpointKey(
-    thread_id: string,
-    checkpoint_ns: string,
-    checkpoint_id: string | undefined
+    threadId: string,
+    checkpointNs: string,
+    checkpointId: string | undefined
   ): Promise<string | null> {
-    if (checkpoint_id) {
-      return makeRedisCheckpointKey(thread_id, checkpoint_ns, checkpoint_id);
+    if (checkpointId) {
+      return makeRedisCheckpointKey(threadId, checkpointNs, checkpointId);
     }
 
-    const all_keys = await this.connection.keys(
-      makeRedisCheckpointKey(thread_id, checkpoint_ns, "*")
+    const allKeys = await this.connection.keys(
+      makeRedisCheckpointKey(threadId, checkpointNs, "*")
     );
 
-    if (all_keys.length === 0) {
+    if (allKeys.length === 0) {
       return null;
     }
 
-    const latest_key = all_keys.reduce((maxKey, currentKey) => {
+    const latestKey = allKeys.reduce((maxKey, currentKey) => {
       const maxKeyData = parseRedisCheckpointKey(maxKey);
       const currentKeyData = parseRedisCheckpointKey(currentKey);
       return maxKeyData.checkpoint_id > currentKeyData.checkpoint_id
@@ -333,6 +333,6 @@ export class RedisSaver extends BaseCheckpointSaver {
         : currentKey;
     });
 
-    return latest_key;
+    return latestKey;
   }
 }

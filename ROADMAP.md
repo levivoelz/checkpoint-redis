@@ -1,0 +1,48 @@
+# Roadmap
+
+Planned improvements for `checkpoint-redis`.
+
+## Critical Issues
+
+### Error Handling & Validation
+- [ ] **Inconsistent validation** - `put()` method doesn't validate `thread_id`
+- [ ] **Silent failures** - `putWrites()` uses fire-and-forget operations with no error handling
+- [ ] **Missing connection validation** - no check if Redis is actually connected
+- [ ] **Better error messages** with context about failed operations
+
+### Performance Issues
+- [ ] **Inefficient key parsing** - `filterKeys()` parses every key twice
+- [ ] **Memory leaks** - `keys()` operations load all matching keys into memory
+- [ ] **Batch Redis operations** for `putWrites()` instead of individual `hset` calls
+- [ ] **Optimize `_getCheckpointKey()`** - parses all keys to find latest
+
+### Code Quality Issues
+- [ ] **Fix typo** - `decodeCommaSeperatedString` should be "Separated"
+- [ ] **Fix `deleteThread()`** - hardcodes empty `checkpoint_ns` instead of using parameter
+- [ ] **Consistent naming** - mix of `thread_id` vs `threadId` throughout codebase
+- [ ] **Add null checks** in several places
+
+### API Improvements
+- [ ] **Configuration options** for key prefixes and Redis options
+- [ ] **Better TypeScript types** - more specific return types
+- [ ] **Connection health checks** before operations
+
+## Nice to Have
+
+### Testing
+- [ ] **Error scenario tests** - Redis failures, malformed data
+- [ ] **Integration tests** - real Redis instead of mocks
+- [ ] **Concurrent access tests** - race conditions
+
+### Documentation
+- [ ] **API documentation** with JSDoc comments
+- [ ] **More usage examples** in README
+- [ ] **Migration guide** for breaking changes
+
+---
+
+## How to Contribute
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup and guidelines.
+
+**Want to help?** Check the issues or start a discussion!

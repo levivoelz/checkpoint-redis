@@ -2,32 +2,32 @@
 
 > **The only Redis-based checkpoint saver for LangGraph in TypeScript/JavaScript**
 
-A production-ready, high-performance checkpoint saver for [LangGraph](https://github.com/langchain-ai/langgraphjs) that uses Redis for persistent state storage. Perfect for building resilient, stateful AI applications that can survive restarts and scale horizontally.
+A Redis checkpoint saver for [LangGraph](https://github.com/langchain-ai/langgraphjs) that persists your app state across restarts and scales with your application.
 
 ## Why checkpoint-redis?
 
-### 🚀 **Fills a Critical Gap**
+### **Fills a Gap**
 - **Only Redis checkpoint saver** for LangGraph in TypeScript/JavaScript
 - Official LangGraph checkpoint savers are Python-only (SQLite, PostgreSQL)
 - Essential for Node.js/TypeScript LangGraph applications
 
-### ⚡ **Production-Ready Performance**
-- **Redis-powered**: Sub-millisecond read/write operations
-- **Horizontal scaling**: Share state across multiple application instances
-- **Memory efficiency**: Redis's optimized data structures
+### **Fast & Reliable**
+- **Redis-powered**: Fast read/write operations
+- **Scales easily**: Share state across multiple app instances
+- **Memory efficient**: Redis handles the heavy lifting
 - **High availability**: Redis clustering and replication support
 
-### 🛡️ **Resilient AI Applications**
-- **Survive restarts**: Resume interrupted LangGraph executions
-- **State persistence**: Never lose conversation or workflow state
-- **Debugging support**: Inspect execution history and state
-- **Fault tolerance**: Handle failures gracefully with checkpoint recovery
+### **Keeps Your App Running**
+- **Survive restarts**: Resume where you left off
+- **Persistent state**: Conversations and workflows persist
+- **Easy debugging**: Check execution history and state
+- **Fault tolerance**: Graceful recovery with checkpoints
 
-### 🎯 **Perfect For**
-- **Long-running conversations** with AI agents
-- **Multi-step workflows** that need to persist state
-- **Distributed AI systems** with shared state
-- **Production applications** requiring reliability
+### **Perfect For**
+- **Long conversations** with AI agents
+- **Multi-step workflows** that need state persistence
+- **Distributed systems** with shared state
+- **Applications** requiring reliability
 
 ## Install
 
@@ -151,6 +151,17 @@ new RedisSaver({ connection: Redis }, serde?: SerializerProtocol)
 ## Contributing
 
 Contributions welcome! Please see our [contributing guidelines](CONTRIBUTING.md).
+
+## Roadmap
+
+Planned improvements for `checkpoint-redis`:
+
+- **Error Handling** - Better validation and error messages
+- **Performance** - Batch operations and memory optimization
+- **Code Quality** - Fix bugs and improve consistency
+- **API Improvements** - More configuration options and better types
+
+See the [detailed roadmap](./ROADMAP.md) for the complete list.
 
 ## License
 

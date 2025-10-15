@@ -81,14 +81,14 @@ export function filterKeys(
   return processedKeys;
 }
 
-export function dumpWrites(
+export async function dumpWrites(
   serde: SerializerProtocol,
   writes: PendingWrite[]
-): { channel: string; type: string; value: Uint8Array }[] {
-  return writes.map(([channel, value]) => {
-    const [type, serializedValue] = serde.dumpsTyped(value);
+): Promise<{ channel: string; type: string; value: Uint8Array }[]> {
+  return Promise.all(writes.map(async ([channel, value]) => {
+    const [type, serializedValue] = await serde.dumpsTyped(value);
     return { channel, type, value: serializedValue };
-  });
+  }));
 }
 
 export async function loadWrites(

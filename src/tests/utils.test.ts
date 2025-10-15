@@ -4,7 +4,6 @@ import {
   type PendingWrite,
   type CheckpointPendingWrite,
 } from "@langchain/langgraph-checkpoint";
-/* eslint-disable-next-line import/no-relative-packages */
 import { JsonPlusSerializer } from "../../node_modules/@langchain/langgraph-checkpoint/dist/serde/jsonplus.js";
 
 import {
@@ -153,7 +152,7 @@ await describe("Redis Checkpoint Utils", async () => {
         ["channel1", { data: "value1" }],
         ["channel2", { data: "value2" }],
       ];
-      const result = dumpWrites(serde, writes);
+      const result = await dumpWrites(serde, writes);
       assert.equal(result.length, 2);
 
       // Check first write

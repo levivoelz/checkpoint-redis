@@ -50,8 +50,8 @@ export class RedisSaver extends BaseCheckpointSaver {
       checkpoint_id
     );
     const [checkpointType, serializedCheckpoint] =
-      this.serde.dumpsTyped(checkpoint);
-    const [metadataType, serializedMetadata] = this.serde.dumpsTyped(metadata);
+      await this.serde.dumpsTyped(checkpoint);
+    const [metadataType, serializedMetadata] = await this.serde.dumpsTyped(metadata);
 
     if (checkpointType !== metadataType) {
       throw new Error("Mismatched checkpoint and metadata types.");
@@ -94,7 +94,7 @@ export class RedisSaver extends BaseCheckpointSaver {
       );
     }
 
-    const dumpedWrites = dumpWrites(this.serde, writes);
+    const dumpedWrites = await dumpWrites(this.serde, writes);
 
     for (const [idx, write] of dumpedWrites.entries()) {
       const key = makeRedisCheckpointWritesKey(
@@ -181,6 +181,22 @@ export class RedisSaver extends BaseCheckpointSaver {
       if (data && data.checkpoint && data.metadata) {
         yield parseRedisCheckpointData(this.serde, key, data);
       }
+    }
+  }
+
+  async deleteThread(threadId: string): Promise<void> {
+    // Get all checkpoint keys for this thread
+    const checkpointPattern = makeRedisCheckpointKey(threadId, "", "*");
+    const checkpointKeys = await this.connection.keys(checkpointPattern);
+
+    // Get all write keys for this thread
+    const writesPattern = makeRedisCheckpointWritesKey(threadId, "", "*", "*", null);
+    const writeKeys = await this.connection.keys(writesPattern);
+
+    // Delete all keys
+    const allKeys = [...checkpointKeys, ...writeKeys];
+    if (allKeys.length > 0) {
+      await this.connection.del(...allKeys);
     }
   }
 

@@ -37,7 +37,7 @@ Planned improvements for `checkpoint-redis`.
 ### Documentation
 - [ ] **API documentation** with JSDoc comments
 - [ ] **More usage examples** in README
-- [ ] **Migration guide** for breaking changes
+- [x] **Migration guide** for breaking changes ✅ Added in commit 4f7de9f
 
 ---
 

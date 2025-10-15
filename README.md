@@ -160,6 +160,10 @@ new RedisSaver({ connection: Redis, ttl?: number }, serde?: SerializerProtocol)
 - `putWrites(config, writes, taskId)` - Save pending writes
 - `list(config, options?)` - List checkpoints with optional filtering
 
+## Migration Guide
+
+Upgrading from v0.1.x? See our [migration guide](MIGRATION.md) for details on new features and improvements.
+
 ## Contributing
 
 Contributions welcome! Please see our [contributing guidelines](CONTRIBUTING.md).

@@ -11,6 +11,7 @@ import { RedisSaver } from "../redis-saver.js";
 
 const redisClient = new Redis();
 const saver = new RedisSaver({ connection: redisClient });
+const saverWithTTL = new RedisSaver({ connection: redisClient, ttl: 60 });
 
 const checkpoint1: Checkpoint = {
   v: 1,
@@ -152,5 +153,34 @@ await describe("RedisSaver", async () => {
       checkpointTuple2.checkpoint.ts,
       "2024-04-20T17:19:07.952Z"
     );
+  });
+
+  await it("should set TTL on checkpoint keys when configured", async () => {
+    // Clear Redis before test
+    await redisClient.flushall();
+
+    const checkpoint: Checkpoint = {
+      v: 1,
+      id: uuid6(-1),
+      ts: "2024-04-19T17:19:07.952Z",
+      channel_values: { testKey: "testValue" },
+      channel_versions: { testKey: 1 },
+      versions_seen: {},
+      pending_sends: [],
+    };
+
+    // Save checkpoint with TTL
+    await saverWithTTL.put(
+      { configurable: { thread_id: "ttl-test" } },
+      checkpoint,
+      { source: "update", step: -1, writes: null }
+    );
+
+    // Check that TTL was set
+    const key = "checkpoint:ttl-test::" + checkpoint.id;
+    const ttl = await redisClient.ttl(key);
+    
+    // TTL should be set (exact value may vary due to Redis mock behavior)
+    assert.ok(ttl > 0, "TTL should be set on checkpoint key");
   });
 });

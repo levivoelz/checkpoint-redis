@@ -23,14 +23,17 @@ import {
 
 export type RedisSaverParams = {
   connection: Redis;
+  ttl?: number; // TTL in seconds for checkpoint keys
 };
 
 export class RedisSaver extends BaseCheckpointSaver {
   connection: Redis;
+  ttl?: number;
 
-  constructor({ connection }: RedisSaverParams, serde?: SerializerProtocol) {
+  constructor({ connection, ttl }: RedisSaverParams, serde?: SerializerProtocol) {
     super(serde);
     this.connection = connection;
+    this.ttl = ttl;
   }
 
   async put(
@@ -66,6 +69,11 @@ export class RedisSaver extends BaseCheckpointSaver {
     };
 
     await this.connection.hset(key, data);
+
+    // Set TTL if configured
+    if (this.ttl) {
+      await this.connection.expire(key, this.ttl);
+    }
 
     return {
       configurable: {
@@ -105,7 +113,12 @@ export class RedisSaver extends BaseCheckpointSaver {
         idx
       );
 
-      void this.connection.hset(key, write);
+      await this.connection.hset(key, write);
+
+      // Set TTL if configured
+      if (this.ttl) {
+        await this.connection.expire(key, this.ttl);
+      }
     }
   }
 

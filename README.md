@@ -15,6 +15,7 @@ A Redis checkpoint saver for [LangGraph](https://github.com/langchain-ai/langgra
 - **Redis-powered**: Fast read/write operations
 - **Scales easily**: Share state across multiple app instances
 - **Memory efficient**: Redis handles the heavy lifting
+- **TTL support**: Automatic cleanup of old checkpoints
 - **High availability**: Redis clustering and replication support
 
 ### **Keeps Your App Running**
@@ -80,7 +81,14 @@ const redis = new Redis({
   maxRetriesPerRequest: 3,
 });
 
+// Basic checkpoint saver
 const checkpointSaver = new RedisSaver({ connection: redis });
+
+// With TTL (checkpoints expire after 1 hour)
+const checkpointSaverWithTTL = new RedisSaver({ 
+  connection: redis, 
+  ttl: 3600 // 1 hour in seconds
+});
 ```
 
 ### Multiple Threads
@@ -138,8 +146,12 @@ const specific = await checkpointSaver.getTuple({
 
 #### Constructor
 ```ts
-new RedisSaver({ connection: Redis }, serde?: SerializerProtocol)
+new RedisSaver({ connection: Redis, ttl?: number }, serde?: SerializerProtocol)
 ```
+
+**Parameters:**
+- `connection` - Redis connection instance
+- `ttl` - Optional TTL in seconds for checkpoint keys (default: no expiration)
 
 #### Methods
 

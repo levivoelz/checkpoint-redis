@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkpoint Redis Chat Demo</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-container {
+            width: 95%;
+            max-width: 1200px;
+            height: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            overflow: hidden;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .checkpoint-sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-left: 1px solid #e9ecef;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+        }
+
+        .message.user .message-avatar {
+            background: #667eea;
+        }
+
+        .message.assistant .message-avatar {
+            background: #28a745;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .send-button:hover {
+            background: #5a6fd8;
+        }
+
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .clear-button {
+            padding: 12px 16px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .clear-button:hover {
+            background: #c82333;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 20px;
+            color: #6c757d;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+
+        .checkpoint-stats {
+            background: #f8f9fa;
+            padding: 6px 20px;
+            font-size: 12px;
+            color: #6c757d;
+            display: none;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .checkpoint-stats.show {
+            display: block;
+        }
+
+        .stats-grid {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #6c757d;
+        }
+
+        .stat-value {
+            color: #495057;
+            font-family: 'Courier New', monospace;
+        }
+
+        .checkpoint-log-header {
+            background: #e9ecef;
+            padding: 12px 16px;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .checkpoint-log-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .checkpoint-log-entry {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            color: #495057;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .checkpoint-log-entry:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .checkpoint-log-entry.new {
+            border-color: #28a745;
+            background: #f8fff9;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .checkpoint-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .checkpoint-entry-id {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 10px;
+        }
+
+        .checkpoint-entry-time {
+            color: #6c757d;
+            font-size: 10px;
+        }
+
+        .checkpoint-entry-details {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        .checkpoint-entry-field {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+
+        .checkpoint-entry-field strong {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .checkpoint-entry-field span {
+            color: #6c757d;
+        }
+
+        .checkpoint-entry-actions {
+            margin-top: 8px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .copy-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .copy-button:hover {
+            background: #5a6fd8;
+        }
+
+        .copy-button.copied {
+            background: #28a745;
+        }
+
+        .error-message {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #c62828;
+        }
+
+        .ollama-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 10px 20px;
+            font-size: 14px;
+            color: #856404;
+            display: none;
+        }
+
+        .ollama-warning.show {
+            display: block;
+        }
+
+        .model-selector {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 10px 20px;
+            font-size: 14px;
+            color: #2d5a2d;
+            display: none;
+        }
+
+        .model-selector.show {
+            display: block;
+        }
+
+        .model-selector-content {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .model-description {
+            font-weight: 500;
+        }
+
+        .model-dropdown {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .model-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .model-button:hover {
+            background: #218838;
+        }
+
+        .model-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .ttl-checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        .ttl-checkbox {
+            margin: 0;
+        }
+
+        .ttl-label {
+            color: #2d5a2d;
+            font-weight: 500;
+        }
+
+        @media (max-width: 900px) {
+            .chat-container {
+                width: 95%;
+                height: 100vh;
+                border-radius: 0;
+                flex-direction: column;
+            }
+            
+            .checkpoint-sidebar {
+                width: 100%;
+                height: 200px;
+                border-left: none;
+                border-top: 1px solid #e9ecef;
+            }
+            
+            .chat-main {
+                flex: 1;
+                min-height: 0;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .checkpoint-sidebar {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-main">
+            <div class="chat-header">
+                <h1>🤖 Checkpoint Redis Chat</h1>
+                <p>Powered by checkpoint-redis v0.3.0</p>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Connecting...</span>
+                </div>
+                <div id="checkpointStats" class="checkpoint-stats">
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Stats will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="ollama-warning" id="ollamaWarning">
+                <strong>⚠️ Ollama Required:</strong> This demo uses Ollama for AI responses. Please install and start Ollama on your system, or the chat will use fallback responses.
+            </div>
+
+            <div class="model-selector" id="modelSelector">
+                <div class="model-selector-content">
+                    <div class="model-description">
+                        <strong>🤖 Select AI Model:</strong> Choose which Ollama model to use for responses.
+                    </div>
+                    <select id="modelDropdown" class="model-dropdown">
+                        <option value="">Loading models...</option>
+                    </select>
+                    <button id="modelButton" class="model-button" disabled>Set Model</button>
+                    <div class="ttl-checkbox-container">
+                        <input type="checkbox" id="ttlCheckbox" class="ttl-checkbox">
+                        <label for="ttlCheckbox" class="ttl-label">Use TTL (1h)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="messages-container" id="messagesContainer">
+                <div class="message assistant">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <div>Hello! I'm a demo chatbot powered by checkpoint-redis. Every message is automatically saved as a checkpoint in Redis with TTL support. Try sending me a message!</div>
+                        <div class="message-time" id="welcomeTime"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                Assistant is typing...
+            </div>
+
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    class="message-input" 
+                    placeholder="Type your message here..."
+                    autocomplete="off"
+                >
+                <button id="sendButton" class="send-button">Send</button>
+                <button id="clearButton" class="clear-button">Clear</button>
+            </div>
+        </div>
+
+        <div class="checkpoint-sidebar">
+            <div class="checkpoint-log-header">
+                📊 Checkpoint Log
+            </div>
+            <div class="checkpoint-log-list" id="checkpointLogList">
+                <!-- Checkpoint entries will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize socket connection
+        const socket = io();
+        
+        // Get DOM elements
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearButton = document.getElementById('clearButton');
+        const statusText = document.getElementById('statusText');
+        const statusDot = document.getElementById('statusDot');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const checkpointStats = document.getElementById('checkpointStats');
+        const statsGrid = document.getElementById('statsGrid');
+        const welcomeTime = document.getElementById('welcomeTime');
+        const ollamaWarning = document.getElementById('ollamaWarning');
+        const modelSelector = document.getElementById('modelSelector');
+        const modelDropdown = document.getElementById('modelDropdown');
+        const modelButton = document.getElementById('modelButton');
+        const checkpointLogList = document.getElementById('checkpointLogList');
+        const ttlCheckbox = document.getElementById('ttlCheckbox');
+
+        // Set welcome message time
+        welcomeTime.textContent = new Date().toLocaleTimeString();
+
+        // Generate unique thread and user IDs
+        const threadId = `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const userId = `user_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Check Ollama status on page load
+        fetch('/api/ollama-status')
+            .then(response => response.json())
+            .then(data => updateOllamaStatus(data))
+            .catch(() => {
+                // If API call fails, show warning
+                updateOllamaStatus({ connected: false, model: null, availableModels: [] });
+            });
+
+        // Connection status
+        socket.on('connect', () => {
+            statusText.textContent = 'Connected';
+            statusDot.style.background = '#28a745';
+            socket.emit('join_chat', { threadId, userId });
+        });
+
+        socket.on('disconnect', () => {
+            statusText.textContent = 'Disconnected';
+            statusDot.style.background = '#dc3545';
+        });
+
+        // Session restoration
+        socket.on('session_restored', (data) => {
+            if (data.messages && data.messages.length > 1) {
+                // Clear welcome message and show restored messages
+                messagesContainer.innerHTML = '';
+                data.messages.forEach(msg => {
+                    addMessage(msg.content, msg.role, msg.timestamp);
+                });
+            }
+        });
+
+        // Message handling
+        socket.on('message_received', (data) => {
+            addMessage(data.message.content, data.message.role, data.message.timestamp);
+        });
+
+        // Checkpoint tracking
+        let checkpointCount = 0;
+        let totalMessages = 0;
+        let sessionStartTime = new Date();
+        let lastCheckpointTime = null;
+        let checkpointData = new Map(); // Store checkpoint data for copying
+
+        function updateCheckpointStats() {
+            const now = new Date();
+            const sessionDuration = Math.floor((now - sessionStartTime) / 1000);
+            const timeSinceLastCheckpoint = lastCheckpointTime ? Math.floor((now - lastCheckpointTime) / 1000) : 0;
+            
+            statsGrid.innerHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">Messages:</span>
+                    <span class="stat-value">${totalMessages}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Session:</span>
+                    <span class="stat-value">${Math.floor(sessionDuration / 60)}m</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Last:</span>
+                    <span class="stat-value">${timeSinceLastCheckpoint}s ago</span>
+                </div>
+            `;
+            checkpointStats.classList.add('show');
+        }
+
+        socket.on('checkpoint_saved', (data) => {
+            const sessionAge = new Date() - new Date(data.sessionCreated);
+            const sessionAgeMinutes = Math.floor(sessionAge / 60000);
+            
+            // Update stats
+            checkpointCount++;
+            totalMessages = data.totalMessages;
+            lastCheckpointTime = new Date(data.timestamp);
+            updateCheckpointStats();
+            
+            // Store checkpoint data for copying
+            checkpointData.set(checkpointCount, data);
+            
+            // Create checkpoint log entry
+            const entry = document.createElement('div');
+            entry.className = 'checkpoint-log-entry new';
+            entry.innerHTML = `
+                <div class="checkpoint-entry-header">
+                    <div class="checkpoint-entry-id">#${checkpointCount}</div>
+                    <div class="checkpoint-entry-time">${new Date(data.timestamp).toLocaleTimeString()}</div>
+                </div>
+                <div class="checkpoint-entry-details">
+                    <div class="checkpoint-entry-field">
+                        <strong>ID:</strong>
+                        <span>${data.checkpointId.substring(0, 20)}...</span>
+                    </div>
+                    <div class="checkpoint-entry-field">
+                        <strong>Thread:</strong>
+                        <span>${data.threadId.substring(0, 15)}...</span>
+                    </div>
+                    <div class="checkpoint-entry-field">
+                        <strong>Namespace:</strong>
+                        <span>${data.config.checkpoint_ns || 'default'}</span>
+                    </div>
+                    <div class="checkpoint-entry-field">
+                        <strong>User:</strong>
+                        <span>${data.config.user_id ? data.config.user_id.substring(0, 10) + '...' : 'anonymous'}</span>
+                    </div>
+                    <div class="checkpoint-entry-field">
+                        <strong>Messages:</strong>
+                        <span>${data.totalMessages}</span>
+                    </div>
+                    <div class="checkpoint-entry-field">
+                        <strong>Age:</strong>
+                        <span>${sessionAgeMinutes}m</span>
+                    </div>
+                    <div class="checkpoint-entry-field">
+                        <strong>Step:</strong>
+                        <span>${data.metadata.step}</span>
+                    </div>
+                </div>
+                <div class="checkpoint-entry-actions">
+                    <button class="copy-button" onclick="copyCheckpointData(${checkpointCount})">Copy</button>
+                </div>
+            `;
+            
+            // Add to top of log
+            checkpointLogList.insertBefore(entry, checkpointLogList.firstChild);
+            
+            // Remove 'new' class after animation
+            setTimeout(() => {
+                entry.classList.remove('new');
+            }, 300);
+            
+            // Keep only last 20 entries
+            while (checkpointLogList.children.length > 20) {
+                checkpointLogList.removeChild(checkpointLogList.lastChild);
+            }
+            
+            // Scroll to top to show new entry
+            checkpointLogList.scrollTop = 0;
+        });
+
+        // Error handling
+        socket.on('error', (data) => {
+            addErrorMessage(data.message);
+        });
+
+        // Chat cleared
+        socket.on('chat_cleared', (data) => {
+            messagesContainer.innerHTML = '';
+            
+            // Reset checkpoint stats
+            checkpointCount = 0;
+            totalMessages = 0;
+            sessionStartTime = new Date();
+            lastCheckpointTime = null;
+            updateCheckpointStats();
+            
+            // Clear checkpoint log
+            checkpointLogList.innerHTML = '';
+            
+            addMessage('Chat cleared! All checkpoints have been deleted from Redis.', 'assistant');
+        });
+
+        // Ollama status
+        socket.on('ollama_status', (data) => {
+            updateOllamaStatus(data);
+        });
+
+        // Model changed
+        socket.on('model_changed', (data) => {
+            if (data.success) {
+                addMessage(`✅ Switched to model: ${data.model}`, 'assistant');
+                modelButton.textContent = 'Model Set';
+                modelButton.disabled = true;
+            } else {
+                addErrorMessage('Failed to set model. Please try again.');
+            }
+        });
+
+        // Send message function
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Disable input while processing
+            sendButton.disabled = true;
+            messageInput.disabled = true;
+            typingIndicator.classList.add('show');
+
+            // Send message
+            socket.emit('send_message', {
+                threadId,
+                message,
+                userId
+            });
+
+            // Clear input
+            messageInput.value = '';
+        }
+
+        // Add message to UI
+        function addMessage(content, role, timestamp) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = role === 'user' ? '👤' : '🤖';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            const messageTime = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            messageContent.innerHTML = `
+                <div>${content}</div>
+                <div class="message-time">${messageTime}</div>
+            `;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Hide typing indicator
+            typingIndicator.classList.remove('show');
+            
+            // Re-enable input
+            sendButton.disabled = false;
+            messageInput.disabled = false;
+            messageInput.focus();
+        }
+
+        // Add error message
+        function addErrorMessage(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            messagesContainer.appendChild(errorDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Update Ollama status
+        let ollamaStatusInitialized = false;
+        function updateOllamaStatus(status) {
+            if (status.connected) {
+                ollamaWarning.classList.remove('show');
+                modelSelector.classList.add('show');
+                
+                // Populate model dropdown
+                modelDropdown.innerHTML = '';
+                status.availableModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    if (model === status.model) {
+                        option.selected = true;
+                        modelButton.textContent = 'Model Set';
+                        modelButton.disabled = true;
+                    }
+                    modelDropdown.appendChild(option);
+                });
+                
+                // Only show message on first connection
+                if (status.model && !ollamaStatusInitialized) {
+                    addMessage(`🤖 Connected to Ollama with model: ${status.model}`, 'assistant');
+                    ollamaStatusInitialized = true;
+                }
+            } else {
+                ollamaWarning.classList.add('show');
+                modelSelector.classList.remove('show');
+                if (!ollamaStatusInitialized) {
+                    addMessage('⚠️ Ollama not connected. Using fallback responses.', 'assistant');
+                    ollamaStatusInitialized = true;
+                }
+            }
+        }
+
+        // Set model
+        function setModel() {
+            const selectedModel = modelDropdown.value;
+            if (selectedModel) {
+                socket.emit('set_model', { modelName: selectedModel });
+                modelButton.textContent = 'Setting...';
+                modelButton.disabled = true;
+            }
+        }
+
+        // Toggle TTL
+        function toggleTtl() {
+            const useTtl = ttlCheckbox.checked;
+            fetch('/api/toggle-ttl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ useTtl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage(`✅ ${data.message}`, 'assistant');
+                } else {
+                    addErrorMessage('Failed to toggle TTL setting');
+                }
+            })
+            .catch(error => {
+                addErrorMessage('Error toggling TTL setting');
+            });
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        clearButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the chat? This will delete all checkpoints from Redis.')) {
+                socket.emit('clear_chat', { threadId });
+            }
+        });
+        modelButton.addEventListener('click', setModel);
+        modelDropdown.addEventListener('change', () => {
+            modelButton.textContent = 'Set Model';
+            modelButton.disabled = false;
+        });
+        ttlCheckbox.addEventListener('change', toggleTtl);
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Focus input on load
+        messageInput.focus();
+
+        // Update stats every 5 seconds to keep "Last" stat current
+        setInterval(() => {
+            if (checkpointCount > 0) {
+                updateCheckpointStats();
+            }
+        }, 5000);
+
+        // Copy checkpoint data
+        window.copyCheckpointData = function(checkpointNumber) {
+            const data = checkpointData.get(checkpointNumber);
+            if (!data) return;
+
+            const copyText = `Checkpoint #${checkpointNumber}
+ID: ${data.checkpointId}
+Thread: ${data.threadId}
+Namespace: ${data.config.checkpoint_ns || 'default'}
+User: ${data.config.user_id || 'anonymous'}
+Messages: ${data.totalMessages}
+Step: ${data.metadata.step}
+Source: ${data.metadata.source}
+Timestamp: ${data.timestamp}
+Session Created: ${data.sessionCreated}`;
+
+            navigator.clipboard.writeText(copyText).then(() => {
+                // Find the copy button and show feedback
+                const buttons = document.querySelectorAll('.copy-button');
+                const button = Array.from(buttons).find(btn => 
+                    btn.onclick && btn.onclick.toString().includes(`copyCheckpointData(${checkpointNumber})`)
+                );
+                
+                if (button) {
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('copied');
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                addErrorMessage('Failed to copy checkpoint data');
+            });
+        };
+    </script>
+</body>
+</html>

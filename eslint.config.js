@@ -96,4 +96,27 @@ export default [
       '@typescript-eslint/no-unused-vars': ['warn', { args: 'none' }],
     },
   },
+  {
+    files: ['demo/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        fetch: 'readonly',
+        Buffer: 'readonly',
+        global: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 0,
+      'no-process-env': 0,
+    },
+  },
 ];

@@ -160,6 +160,24 @@ new RedisSaver({ connection: Redis, ttl?: number }, serde?: SerializerProtocol)
 - `putWrites(config, writes, taskId)` - Save pending writes
 - `list(config, options?)` - List checkpoints with optional filtering
 
+## Demo
+
+See `checkpoint-redis` in action with our interactive chat demo:
+
+```bash
+git clone https://github.com/levivoelz/checkpoint-redis.git
+cd checkpoint-redis/demo
+docker-compose up --build
+# Open http://localhost:3000
+```
+
+The demo features:
+- **AI-powered chat** with Ollama integration
+- **Real-time checkpoint logging** with detailed sidebar
+- **TTL toggle** for checkpoint expiration
+- **Model selection** and live stats
+- **Copy functionality** for debugging
+
 ## Migration Guide
 
 Upgrading from v0.1.x? See our [migration guide](MIGRATION.md) for details on new features and improvements.
